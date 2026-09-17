@@ -520,6 +520,9 @@ class DemandForecastResponse(BaseModel):
     predicted_quantity: float
     model_version: str
     generated_at: datetime
+    p10_quantity: Optional[float] = None
+    p50_quantity: Optional[float] = None
+    p90_quantity: Optional[float] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -575,6 +578,77 @@ class ModelEvaluationResponse(BaseModel):
     metrics: Dict[str, Any]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# =========================================================
+# Advanced ML Inventory Health & Simulation Schemas
+# =========================================================
+
+class ListingHealthItem(BaseModel):
+    store_product_listing_id: UUID
+    product_id: Optional[UUID] = None
+    product_name: Optional[str] = None
+    brand: Optional[str] = None
+    variant_label: Optional[str] = None
+    current_price: float = 0.0
+    current_stock: float = 0.0
+    daily_demand_p10: float = 0.0
+    daily_demand_p50: float = 0.0
+    daily_demand_p90: float = 0.0
+    safety_stock: float = 0.0
+    reorder_point: float = 0.0
+    economic_order_qty: float = 0.0
+    days_of_supply: float = 0.0
+    stockout_risk: Literal["stockout", "critical", "warning", "healthy", "overstock"]
+    estimated_weekly_lost_revenue: float = 0.0
+    is_perishable: bool = False
+    recommended_action: str
+
+
+class InventoryHealthResponse(BaseModel):
+    store_id: UUID
+    store_name: str
+    evaluated_at: datetime
+    total_listings: int
+    stockout_count: int
+    critical_count: int
+    warning_count: int
+    healthy_count: int
+    overstock_count: int
+    total_estimated_weekly_lost_revenue: float
+    target_service_level: float
+    lead_time_days: float
+    listings_health: List[ListingHealthItem]
+
+
+class ScenarioSimulationRequest(BaseModel):
+    demand_surge_pct: float = Field(0.0, ge=-100.0, le=500.0, description="Percentage shift in demand e.g. +30.0 for a festival surge")
+    lead_time_delay_days: int = Field(0, ge=0, le=30, description="Supplier delivery delay in days")
+    target_service_level: float = Field(0.95, ge=0.80, le=0.999, description="Target service level probability (e.g. 0.95)")
+
+
+class EmergencyOrderItem(BaseModel):
+    store_product_listing_id: UUID
+    product_name: str
+    current_stock: float
+    simulated_rop: float
+    stockout_in_days: float
+    recommended_emergency_order_qty: float
+    urgency: Literal["immediate", "high", "medium"]
+
+
+class ScenarioSimulationResponse(BaseModel):
+    store_id: UUID
+    simulation_timestamp: datetime
+    demand_surge_pct: float
+    lead_time_delay_days: int
+    target_service_level: float
+    baseline_stockout_items_count: int
+    projected_stockout_items_count: int
+    additional_stockouts_count: int
+    projected_weekly_lost_revenue: float
+    recommended_emergency_orders: List[EmergencyOrderItem]
+
 
 
 
