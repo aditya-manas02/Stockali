@@ -99,3 +99,25 @@ def require_roles(allowed_roles: List[str]):
         return current_user
     return role_checker
 
+
+optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
+
+
+def get_optional_current_user(
+    token: Optional[str] = Depends(optional_oauth2_scheme),
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    """FastAPI dependency to optionally extract current user without throwing 401 if missing."""
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id_str: str = payload.get("sub")
+        if user_id_str is None:
+            return None
+        user_id = UUID(user_id_str)
+        return db.query(User).filter(User.id == user_id).first()
+    except (JWTError, ValueError):
+        return None
+
+

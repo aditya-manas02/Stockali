@@ -16,6 +16,7 @@ from app.schemas import (
     StoreResponse,
 )
 from app.geo_utils import lat_lng_to_point, point_to_lat_lng
+from app.auth_utils import get_optional_current_user
 
 router = APIRouter()
 
@@ -173,6 +174,37 @@ def list_retailer_stores(id: UUID, db: Session = Depends(get_db)):
         .order_by(Store.created_at.desc())
         .all()
     )
+    return [StoreResponse.from_orm_model(s) for s in stores]
+
+
+@router.get(
+    "/stores",
+    response_model=List[StoreResponse],
+    tags=["stores"],
+    summary="List all stores with optional filtering by retailer_id, active status, or current authenticated retailer",
+)
+def list_stores(
+    retailer_id: Optional[UUID] = Query(None, description="Filter by retailer ID"),
+    is_active: Optional[bool] = Query(None, description="Filter by active status"),
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user),
+):
+    query = db.query(Store)
+
+    if retailer_id:
+        query = query.filter(Store.retailer_id == retailer_id)
+    elif current_user and current_user.role in ["retailer_owner", "retailer_staff"]:
+        user_retailers = db.query(Retailer.id).filter(Retailer.owner_user_id == current_user.id).all()
+        retailer_ids = [r[0] for r in user_retailers]
+        if retailer_ids:
+            query = query.filter(Store.retailer_id.in_(retailer_ids))
+        else:
+            return []
+
+    if is_active is not None:
+        query = query.filter(Store.is_active == is_active)
+
+    stores = query.order_by(Store.created_at.desc()).all()
     return [StoreResponse.from_orm_model(s) for s in stores]
 
 
