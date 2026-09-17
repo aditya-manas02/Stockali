@@ -1,0 +1,23 @@
+# Env
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# ML data & artifacts (large — don't commit)
+ml/data/
+ml/models/
+*.h5
+*.pkl
+
+# Node
+node_modules/
+.next/
+dist/
+build/
+
+# OS
+.DS_Store
