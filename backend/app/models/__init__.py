@@ -8,6 +8,7 @@ from app.models.inventory import (
     StockMovement,
 )
 from app.models.events import CustomerEvent
+from app.models.shopping import ShoppingList, ShoppingListItem
 
 __all__ = [
     "Category",
@@ -22,4 +23,6 @@ __all__ = [
     "PriceHistory",
     "StockMovement",
     "CustomerEvent",
+    "ShoppingList",
+    "ShoppingListItem",
 ]

@@ -393,5 +393,77 @@ class PaginatedNearbyProductsResponse(BaseModel):
     offset: int = Field(..., description="Offset applied")
 
 
+# =========================================================
+# Shopping Lists & Pickup Schemas
+# =========================================================
+
+class ShoppingListItemCreate(BaseModel):
+    store_product_listing_id: UUID
+    quantity: float = Field(1.0, gt=0, description="Quantity requested")
+    substitution_allowed: bool = Field(False, description="Whether customer allows product substitution")
+
+
+class ShoppingListItemUpdate(BaseModel):
+    quantity: Optional[float] = Field(None, gt=0)
+    substitution_allowed: Optional[bool] = None
+
+
+class ShoppingListItemStatusUpdate(BaseModel):
+    status: Literal["pending", "confirmed", "substituted", "unavailable"]
+
+
+class ShoppingListItemResponse(BaseModel):
+    id: UUID
+    shopping_list_id: UUID
+    store_product_listing_id: UUID
+    quantity: float
+    substitution_allowed: bool
+    status: str
+    product_name: Optional[str] = None
+    brand: Optional[str] = None
+    variant_label: Optional[str] = None
+    current_price: Optional[float] = None
+    subtotal: Optional[float] = None
+    quantity_on_hand: Optional[float] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ShoppingListCreate(BaseModel):
+    store_id: UUID = Field(..., description="Target store UUID")
+    notes: Optional[str] = Field(None, description="Optional customer notes for in-store pickup")
+    items: Optional[List[ShoppingListItemCreate]] = Field(default_factory=list, description="Initial list items")
+
+
+class ShoppingListStatusUpdate(BaseModel):
+    status: Literal["accepted", "declined", "ready", "collected", "cancelled"] = Field(
+        ..., description="New fulfillment status"
+    )
+
+
+class ShoppingListResponse(BaseModel):
+    id: UUID
+    customer_id: UUID
+    store_id: UUID
+    store_name: Optional[str] = None
+    status: str
+    notes: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    total_items: int = 0
+    estimated_total: float = 0.0
+    items: List[ShoppingListItemResponse] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedShoppingListsResponse(BaseModel):
+    items: List[ShoppingListResponse]
+    total: int
+    limit: int
+    offset: int
+
+
+
 
 
