@@ -464,6 +464,49 @@ class PaginatedShoppingListsResponse(BaseModel):
     offset: int
 
 
+# =========================================================
+# Restock Subscriptions & Notifications Schemas
+# =========================================================
+
+class RestockSubscriptionCreate(BaseModel):
+    store_product_listing_id: UUID = Field(..., description="Store product listing UUID to subscribe to")
+
+
+class RestockSubscriptionResponse(BaseModel):
+    id: UUID
+    customer_id: UUID
+    store_product_listing_id: UUID
+    product_name: Optional[str] = None
+    brand: Optional[str] = None
+    variant_label: Optional[str] = None
+    store_name: Optional[str] = None
+    created_at: datetime
+    notified_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NotificationResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    channel: str
+    title: str
+    body: Optional[str] = None
+    is_read: bool
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedNotificationsResponse(BaseModel):
+    items: List[NotificationResponse]
+    total: int
+    unread_count: int
+    limit: int
+    offset: int
+
+
+
 
 
 

@@ -265,10 +265,46 @@ def get_store_listing(
     )
 
 
+def _trigger_restock_notifications(listing: StoreProductListing, db: Session):
+    from app.models.notifications import RestockSubscription, Notification
+
+    subs = (
+        db.query(RestockSubscription)
+        .filter(
+            RestockSubscription.store_product_listing_id == listing.id,
+            RestockSubscription.notified_at.is_(None),
+        )
+        .all()
+    )
+    if not subs:
+        return
+
+    prod_name = "A subscribed product"
+    variant = db.query(ProductVariant).filter(ProductVariant.id == listing.product_variant_id).first()
+    if variant:
+        prod = db.query(Product).filter(Product.id == variant.product_id).first()
+        if prod:
+            prod_name = f"{prod.name} ({variant.variant_label})"
+
+    store = db.query(Store).filter(Store.id == listing.store_id).first()
+    store_name = store.name if store else "your local store"
+
+    now_ts = func.now()
+    for sub in subs:
+        notification = Notification(
+            user_id=sub.customer_id,
+            channel="in_app",
+            title="Product Back in Stock!",
+            body=f"Good news! {prod_name} is now back in stock at {store_name}.",
+        )
+        db.add(notification)
+        sub.notified_at = now_ts
+
+
 @router.patch(
     "/{listing_id}",
     response_model=StoreListingResponse,
-    summary="Update store listing price, availability, or stock level",
+    summary="Update price, availability, or stock of a store listing",
 )
 def update_store_listing(
     store_id: UUID,
@@ -311,7 +347,9 @@ def update_store_listing(
 
     # 3. Direct stock level update
     if update_in.quantity_on_hand is not None and float(inv.quantity_on_hand) != float(update_in.quantity_on_hand):
-        delta = float(update_in.quantity_on_hand) - float(inv.quantity_on_hand)
+        old_qty = float(inv.quantity_on_hand)
+        new_qty = float(update_in.quantity_on_hand)
+        delta = new_qty - old_qty
         inv.quantity_on_hand = update_in.quantity_on_hand
         db.add(
             StockMovement(
@@ -320,6 +358,8 @@ def update_store_listing(
                 reason=update_in.stock_change_reason or "adjustment",
             )
         )
+        if old_qty <= 0 and new_qty > 0:
+            _trigger_restock_notifications(listing, db)
 
     # 4. Reorder threshold
     if update_in.reorder_threshold is not None:
@@ -362,7 +402,8 @@ def record_stock_movement(
         inv = InventoryRecord(store_product_listing_id=listing.id, quantity_on_hand=0)
         db.add(inv)
 
-    new_quantity = float(inv.quantity_on_hand) + float(movement_in.change_qty)
+    old_quantity = float(inv.quantity_on_hand)
+    new_quantity = old_quantity + float(movement_in.change_qty)
     if new_quantity < 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -377,6 +418,9 @@ def record_stock_movement(
             reason=movement_in.reason,
         )
     )
+
+    if old_quantity <= 0 and new_quantity > 0:
+        _trigger_restock_notifications(listing, db)
 
     listing.last_confirmed_at = func.now()
 

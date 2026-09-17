@@ -9,6 +9,7 @@ from app.models.inventory import (
 )
 from app.models.events import CustomerEvent
 from app.models.shopping import ShoppingList, ShoppingListItem
+from app.models.notifications import RestockSubscription, Notification
 
 __all__ = [
     "Category",
@@ -25,4 +26,6 @@ __all__ = [
     "CustomerEvent",
     "ShoppingList",
     "ShoppingListItem",
+    "RestockSubscription",
+    "Notification",
 ]
