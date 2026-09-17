@@ -1,6 +1,7 @@
-from typing import List, Optional
+from typing import List, Optional, Literal
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -15,6 +16,8 @@ from app.schemas import (
     ProductDetailResponse,
     ProductVariantCreate,
     ProductVariantResponse,
+    PaginatedProductsResponse,
+    PaginatedVariantsResponse,
 )
 
 router = APIRouter()
@@ -125,20 +128,56 @@ def create_product(product_in: ProductCreate, db: Session = Depends(get_db)):
 
 @router.get(
     "/products",
-    response_model=List[ProductResponse],
-    summary="List products with optional search and category filters",
+    response_model=PaginatedProductsResponse,
+    summary="List products with pagination, multi-field search, filters, and sorting",
 )
 def list_products(
+    limit: int = Query(20, ge=1, le=100, description="Page limit (default 20, max 100)"),
+    offset: int = Query(0, ge=0, description="Page offset (default 0)"),
     category_id: Optional[UUID] = Query(None, description="Filter by category ID"),
-    search: Optional[str] = Query(None, description="Search products by name"),
+    search: Optional[str] = Query(None, description="Search products by name or brand (case-insensitive partial match)"),
+    brand: Optional[str] = Query(None, description="Exact-match brand filter"),
+    is_perishable: Optional[bool] = Query(None, description="Filter by perishable status"),
+    sort_by: Literal["name", "created_at"] = Query("created_at", description="Field to sort by: 'name' or 'created_at'"),
+    sort_order: Literal["asc", "desc"] = Query("desc", description="Sort order: 'asc' or 'desc'"),
     db: Session = Depends(get_db),
 ):
     query = db.query(Product)
-    if category_id:
+
+    if category_id is not None:
         query = query.filter(Product.category_id == category_id)
+
     if search:
-        query = query.filter(Product.name.ilike(f"%{search.strip()}%"))
-    return query.order_by(Product.created_at.desc()).all()
+        pattern = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                Product.name.ilike(pattern),
+                Product.brand.ilike(pattern),
+            )
+        )
+
+    if brand is not None:
+        query = query.filter(Product.brand == brand)
+
+    if is_perishable is not None:
+        query = query.filter(Product.is_perishable == is_perishable)
+
+    total = query.count()
+
+    sort_col = Product.name if sort_by == "name" else Product.created_at
+    if sort_order.lower() == "asc":
+        query = query.order_by(sort_col.asc())
+    else:
+        query = query.order_by(sort_col.desc())
+
+    items = query.offset(offset).limit(limit).all()
+
+    return {
+        "items": items,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
 
 
 @router.get(
@@ -281,10 +320,15 @@ def create_product_variant(
 
 @router.get(
     "/products/{id}/variants",
-    response_model=List[ProductVariantResponse],
-    summary="List variants for a product",
+    response_model=PaginatedVariantsResponse,
+    summary="List variants for a product with pagination",
 )
-def list_product_variants(id: UUID, db: Session = Depends(get_db)):
+def list_product_variants(
+    id: UUID,
+    limit: int = Query(20, ge=1, le=100, description="Page limit (default 20, max 100)"),
+    offset: int = Query(0, ge=0, description="Page offset (default 0)"),
+    db: Session = Depends(get_db),
+):
     # Verify product exists
     product = db.query(Product).filter(Product.id == id).first()
     if not product:
@@ -292,4 +336,19 @@ def list_product_variants(id: UUID, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Product with id '{id}' not found",
         )
-    return db.query(ProductVariant).filter(ProductVariant.product_id == id).all()
+
+    query = db.query(ProductVariant).filter(ProductVariant.product_id == id)
+    total = query.count()
+    items = (
+        query.order_by(ProductVariant.variant_label.asc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    return {
+        "items": items,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
