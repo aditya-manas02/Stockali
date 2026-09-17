@@ -41,11 +41,19 @@ export const AuthPage = () => {
     }
   };
 
-  const fillDemoCreds = () => {
+  const handleQuickDemoLogin = async () => {
     setEmailOrPhone('kirana.ramesh@stockali.local');
     setPassword('RetailerPassword123!');
     setIsRegister(false);
     setError(null);
+    setLoading(true);
+    try {
+      await login('kirana.ramesh@stockali.local', 'RetailerPassword123!');
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Demo login failed.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -142,8 +150,9 @@ export const AuthPage = () => {
 
         <div className="space-y-2 pt-2 border-t border-slate-800">
           <button
-            onClick={fillDemoCreds}
-            className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-teal-300 border border-teal-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition"
+            onClick={handleQuickDemoLogin}
+            disabled={loading}
+            className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-teal-300 border border-teal-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition disabled:opacity-50"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>Use Pre-Configured Kirana Demo Account</span>
