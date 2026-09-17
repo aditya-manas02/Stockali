@@ -25,7 +25,6 @@ def health_check_db():
     return {"status": "ok", "postgis_version": postgis_version}
 
 
-# Routers will be registered here as they're built, e.g.:
-# from app.routers import auth, catalogue, inventory, search
-# app.include_router(auth.router, prefix="/auth", tags=["auth"])
-# app.include_router(catalogue.router, prefix="/catalogue", tags=["catalogue"])
+from app.routers import catalogue
+
+app.include_router(catalogue.router, prefix="/catalogue", tags=["catalogue"])
