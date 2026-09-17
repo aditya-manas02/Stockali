@@ -110,7 +110,7 @@ def find_nearby_stores(
     summary="Search for in-stock products in stores near customer coordinates",
 )
 def search_nearby_products(
-    query: str = Query(..., min_length=1, description="Product name, brand, or variant label"),
+    query: Optional[str] = Query(None, description="Product name, brand, or variant label (optional)"),
     latitude: float = Query(..., ge=-90.0, le=90.0, description="Customer latitude coordinate"),
     longitude: float = Query(..., ge=-180.0, le=180.0, description="Customer longitude coordinate"),
     radius_m: float = Query(5000.0, gt=0, le=50000.0, description="Search radius in meters (default 5km, max 50km)"),
@@ -125,8 +125,6 @@ def search_nearby_products(
     )
 
     dist_expr = func.ST_Distance(Store.location, customer_geog).label("store_distance_meters")
-
-    search_pattern = f"%{query.strip()}%"
 
     base_query = (
         db.query(
@@ -144,14 +142,17 @@ def search_nearby_products(
         .filter(func.ST_DWithin(Store.location, customer_geog, radius_m))
         .filter(Store.is_active == True)
         .filter(StoreProductListing.is_available == True)
-        .filter(
+    )
+
+    if query and query.strip():
+        search_pattern = f"%{query.strip()}%"
+        base_query = base_query.filter(
             or_(
                 Product.name.ilike(search_pattern),
                 Product.brand.ilike(search_pattern),
                 ProductVariant.variant_label.ilike(search_pattern),
             )
         )
-    )
 
     if in_stock_only:
         base_query = base_query.filter(InventoryRecord.quantity_on_hand > 0)
@@ -194,7 +195,7 @@ def search_nearby_products(
     event_type = "search" if total > 0 else "out_of_stock_hit"
     event = CustomerEvent(
         event_type=event_type,
-        query_text=query.strip(),
+        query_text=query.strip() if query else "browse_nearby",
         product_id=first_product_id,
         location=lat_lng_to_point(latitude, longitude),
     )

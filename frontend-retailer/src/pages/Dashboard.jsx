@@ -44,12 +44,16 @@ export const Dashboard = ({ onNavigate }) => {
         insightsService.getInventoryHealth(activeStore.id),
       ]);
 
+      const orderItems = orders?.items || (Array.isArray(orders) ? orders : []);
+      const recItems = recs?.items || (Array.isArray(recs) ? recs : []);
+      const discountItems = discounts?.items || (Array.isArray(discounts) ? discounts : []);
+
       setStats({
-        totalListings: listings.total || 0,
-        pendingRestocks: (recs || []).length,
-        activeOrders: (orders || []).filter((o) => ['submitted', 'accepted'].includes(o.status)).length,
-        discountSuggestions: (discounts || []).length,
-        estLostRevenue: health.total_estimated_weekly_lost_revenue || 0,
+        totalListings: listings?.total ?? (Array.isArray(listings) ? listings.length : 0),
+        pendingRestocks: recItems.length,
+        activeOrders: orderItems.filter((o) => ['submitted', 'accepted'].includes(o.status)).length,
+        discountSuggestions: discountItems.length,
+        estLostRevenue: health?.total_estimated_weekly_lost_revenue || 0,
       });
     } catch (err) {
       console.error('Error loading dashboard stats:', err);
