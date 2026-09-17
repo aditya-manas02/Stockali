@@ -40,6 +40,7 @@ def health_check_db():
 
 
 from app.routers import catalogue, users, retailers, inventory, search, auth, shopping, notifications, insights
+from app import event_stream
 
 app.include_router(auth.router)
 app.include_router(catalogue.router, prefix="/catalogue", tags=["catalogue"])
@@ -50,6 +51,7 @@ app.include_router(notifications.router)
 app.include_router(insights.router)
 app.include_router(retailers.router)
 app.include_router(inventory.router)
+app.include_router(event_stream.router)
 
 
 

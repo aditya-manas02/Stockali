@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { insightsService, inventoryService, fulfillmentService } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { InteractiveCatchmentMap } from '../components/InteractiveCatchmentMap';
 
 export const Dashboard = ({ onNavigate }) => {
   const { activeStore } = useAuth();
@@ -157,6 +158,9 @@ export const Dashboard = ({ onNavigate }) => {
           );
         })}
       </div>
+
+      {/* Interactive Hyperlocal Catchment & Demand Hotspots */}
+      <InteractiveCatchmentMap activeStore={activeStore} />
 
       {/* Quick Launch Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

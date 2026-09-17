@@ -22,6 +22,7 @@ from app.schemas import (
     PaginatedShoppingListsResponse,
 )
 from app.auth_utils import get_current_user
+from app.event_stream import broadcast_manager
 
 router = APIRouter(tags=["shopping lists & pickup"])
 
@@ -369,7 +370,22 @@ def submit_shopping_list(
 
     db.commit()
     db.refresh(slist)
-    return _format_shopping_list_response(slist, db)
+    formatted = _format_shopping_list_response(slist, db)
+
+    broadcast_manager.publish_sync(
+        f"store:{slist.store_id}",
+        "order_created",
+        {
+            "order_id": str(slist.id),
+            "store_id": str(slist.store_id),
+            "status": slist.status,
+            "total_items": formatted.total_items,
+            "estimated_total": formatted.estimated_total,
+            "created_at": slist.created_at.isoformat() if slist.created_at else None,
+        },
+    )
+
+    return formatted
 
 
 @router.post(
@@ -475,7 +491,29 @@ def update_order_status(
     slist.updated_at = func.now()
     db.commit()
     db.refresh(slist)
-    return _format_shopping_list_response(slist, db)
+    formatted = _format_shopping_list_response(slist, db)
+
+    broadcast_manager.publish_sync(
+        f"order:{order_id}",
+        "order_status_updated",
+        {
+            "order_id": str(slist.id),
+            "store_id": str(slist.store_id),
+            "status": slist.status,
+            "updated_at": slist.updated_at.isoformat() if slist.updated_at else None,
+        },
+    )
+    broadcast_manager.publish_sync(
+        f"user:{slist.customer_id}",
+        "order_status_updated",
+        {
+            "order_id": str(slist.id),
+            "store_id": str(slist.store_id),
+            "status": slist.status,
+        },
+    )
+
+    return formatted
 
 
 @router.patch(
@@ -505,4 +543,16 @@ def update_order_item_status(
     slist.updated_at = func.now()
     db.commit()
     db.refresh(slist)
-    return _format_shopping_list_response(slist, db)
+    formatted = _format_shopping_list_response(slist, db)
+
+    broadcast_manager.publish_sync(
+        f"order:{order_id}",
+        "order_item_updated",
+        {
+            "order_id": str(slist.id),
+            "item_id": str(item.id),
+            "status": item.status,
+        },
+    )
+
+    return formatted
