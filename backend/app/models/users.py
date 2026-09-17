@@ -1,8 +1,9 @@
 import uuid
-from sqlalchemy import Column, String, Boolean, DateTime, text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, Boolean, DateTime, Integer, ForeignKey, text
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from geoalchemy2 import Geography
 
 from app.database import Base
 
@@ -42,3 +43,32 @@ class User(Base):
     )
 
     retailers = relationship("Retailer", back_populates="owner", cascade="all, delete-orphan")
+    customer_profile = relationship("CustomerProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+
+
+class CustomerProfile(Base):
+    __tablename__ = "customer_profiles"
+
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    default_location = Column(
+        Geography(geometry_type="POINT", srid=4326),
+        nullable=True,
+    )
+    search_radius_m = Column(
+        Integer,
+        nullable=False,
+        default=3000,
+        server_default=text("3000"),
+    )
+    preferences = Column(
+        JSONB,
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
+    )
+
+    user = relationship("User", back_populates="customer_profile")

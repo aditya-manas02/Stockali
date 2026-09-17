@@ -1,5 +1,5 @@
 from app.models.catalogue import Category, Product, ProductVariant
-from app.models.users import User
+from app.models.users import User, CustomerProfile
 from app.models.retailers import Retailer, Store
 from app.models.inventory import (
     StoreProductListing,
@@ -14,6 +14,7 @@ __all__ = [
     "Product",
     "ProductVariant",
     "User",
+    "CustomerProfile",
     "Retailer",
     "Store",
     "StoreProductListing",

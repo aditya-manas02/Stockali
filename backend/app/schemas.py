@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import List, Optional, Literal, Any
+from typing import List, Optional, Literal, Any, Dict
 from uuid import UUID
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 # =========================================================
@@ -101,7 +101,7 @@ class PaginatedVariantsResponse(BaseModel):
 
 
 # =========================================================
-# User Schemas (Temporary creation path)
+# User & Auth Schemas
 # =========================================================
 
 class UserCreate(BaseModel):
@@ -114,6 +114,44 @@ class UserCreate(BaseModel):
     )
 
 
+class UserRegisterRequest(BaseModel):
+    email: Optional[str] = Field(None, description="Unique user email")
+    phone: Optional[str] = Field(None, description="Unique phone number")
+    password: str = Field(..., min_length=6, description="Plain text password (min 6 characters)")
+    full_name: str = Field(..., min_length=1, description="Full name of user")
+    role: Literal["customer", "retailer_owner", "retailer_staff", "admin"] = Field(
+        "customer", description="User role"
+    )
+    default_latitude: Optional[float] = Field(None, ge=-90.0, le=90.0, description="Default latitude for customer")
+    default_longitude: Optional[float] = Field(None, ge=-180.0, le=180.0, description="Default longitude for customer")
+    search_radius_m: Optional[int] = Field(3000, gt=0, le=50000, description="Default search radius in meters")
+
+    @model_validator(mode="after")
+    def check_email_or_phone(self):
+        if not self.email and not self.phone:
+            raise ValueError("Either email or phone must be provided")
+        return self
+
+
+class UserLoginRequest(BaseModel):
+    email_or_phone: str = Field(..., min_length=1, description="User email or phone number")
+    password: str = Field(..., min_length=1, description="Password")
+
+
+class CustomerProfileResponse(BaseModel):
+    search_radius_m: int
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    preferences: Dict[str, Any] = Field(default_factory=dict)
+
+
+class CustomerProfileUpdate(BaseModel):
+    default_latitude: Optional[float] = Field(None, ge=-90.0, le=90.0)
+    default_longitude: Optional[float] = Field(None, ge=-180.0, le=180.0)
+    search_radius_m: Optional[int] = Field(None, gt=0, le=50000)
+    preferences: Optional[Dict[str, Any]] = None
+
+
 class UserResponse(BaseModel):
     id: UUID
     email: Optional[str] = None
@@ -122,6 +160,25 @@ class UserResponse(BaseModel):
     role: str
     is_verified: bool
     created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+
+class UserMeResponse(BaseModel):
+    id: UUID
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    full_name: str
+    role: str
+    is_verified: bool
+    created_at: datetime
+    customer_profile: Optional[CustomerProfileResponse] = None
 
     model_config = ConfigDict(from_attributes=True)
 
