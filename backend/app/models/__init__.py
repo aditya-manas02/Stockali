@@ -7,6 +7,7 @@ from app.models.inventory import (
     PriceHistory,
     StockMovement,
 )
+from app.models.events import CustomerEvent
 
 __all__ = [
     "Category",
@@ -19,4 +20,5 @@ __all__ = [
     "InventoryRecord",
     "PriceHistory",
     "StockMovement",
+    "CustomerEvent",
 ]

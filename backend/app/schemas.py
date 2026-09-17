@@ -283,4 +283,58 @@ class StoreListingDetailResponse(StoreListingResponse):
     recent_stock_movements: List[StockMovementResponse] = []
 
 
+# =========================================================
+# Geospatial Search Schemas
+# =========================================================
+
+class NearbyStoreResponse(BaseModel):
+    id: UUID
+    retailer_id: UUID
+    name: str
+    address: Optional[str] = None
+    latitude: float
+    longitude: float
+    phone: Optional[str] = None
+    opening_hours: Optional[Any] = None
+    is_active: bool
+    distance_meters: float = Field(..., description="Calculated distance in meters from customer coordinates")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedNearbyStoresResponse(BaseModel):
+    items: List[NearbyStoreResponse]
+    total: int = Field(..., description="Total matching stores within radius")
+    limit: int = Field(..., description="Limit applied")
+    offset: int = Field(..., description="Offset applied")
+
+
+class NearbyProductSearchResult(BaseModel):
+    listing_id: UUID
+    store_id: UUID
+    store_name: str
+    store_address: Optional[str] = None
+    store_distance_meters: float
+    product_id: UUID
+    product_name: str
+    brand: Optional[str] = None
+    image_url: Optional[str] = None
+    product_variant_id: UUID
+    variant_label: str
+    barcode: Optional[str] = None
+    current_price: float
+    is_available: bool
+    quantity_on_hand: float
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedNearbyProductsResponse(BaseModel):
+    items: List[NearbyProductSearchResult]
+    total: int = Field(..., description="Total in-stock products matching in nearby stores")
+    limit: int = Field(..., description="Limit applied")
+    offset: int = Field(..., description="Offset applied")
+
+
+
 
