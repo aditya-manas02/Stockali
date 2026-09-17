@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 from typing import List, Optional, Literal, Any, Dict
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -504,6 +504,78 @@ class PaginatedNotificationsResponse(BaseModel):
     unread_count: int
     limit: int
     offset: int
+
+
+# =========================================================
+# ML Insights & Forecast Schemas
+# =========================================================
+
+class DemandForecastResponse(BaseModel):
+    id: UUID
+    store_product_listing_id: UUID
+    product_name: Optional[str] = None
+    brand: Optional[str] = None
+    variant_label: Optional[str] = None
+    forecast_date: date
+    predicted_quantity: float
+    model_version: str
+    generated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RestockRecommendationResponse(BaseModel):
+    id: UUID
+    store_product_listing_id: UUID
+    product_name: Optional[str] = None
+    brand: Optional[str] = None
+    variant_label: Optional[str] = None
+    current_stock: float = 0.0
+    recommended_quantity: float
+    recommended_by: Optional[date] = None
+    confidence: Optional[float] = None
+    explanation: Optional[str] = None
+    retailer_action: str = "pending"
+    generated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RestockActionUpdate(BaseModel):
+    action: Literal["accepted", "adjusted", "dismissed"]
+    adjusted_quantity: Optional[float] = Field(None, gt=0)
+
+
+class DiscountRecommendationResponse(BaseModel):
+    id: UUID
+    store_product_listing_id: UUID
+    product_name: Optional[str] = None
+    brand: Optional[str] = None
+    variant_label: Optional[str] = None
+    current_price: float = 0.0
+    recommended_discount_pct: float
+    discounted_price: float = 0.0
+    reason: Optional[str] = None
+    confidence: Optional[float] = None
+    retailer_action: str = "pending"
+    generated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DiscountActionUpdate(BaseModel):
+    action: Literal["approved", "dismissed"]
+
+
+class ModelEvaluationResponse(BaseModel):
+    id: UUID
+    model_name: str
+    model_version: str
+    evaluated_at: datetime
+    metrics: Dict[str, Any]
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 
 
