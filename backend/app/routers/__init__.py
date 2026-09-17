@@ -1,3 +1,3 @@
-from app.routers import catalogue, users, retailers
+from app.routers import catalogue, users, retailers, inventory
 
-__all__ = ["catalogue", "users", "retailers"]
+__all__ = ["catalogue", "users", "retailers", "inventory"]

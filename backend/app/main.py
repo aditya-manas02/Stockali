@@ -25,9 +25,11 @@ def health_check_db():
     return {"status": "ok", "postgis_version": postgis_version}
 
 
-from app.routers import catalogue, users, retailers
+from app.routers import catalogue, users, retailers, inventory
 
 app.include_router(catalogue.router, prefix="/catalogue", tags=["catalogue"])
 app.include_router(users.router)
 app.include_router(retailers.router)
+app.include_router(inventory.router)
+
 

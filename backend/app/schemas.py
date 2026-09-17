@@ -205,3 +205,82 @@ class RetailerDetailResponse(RetailerResponse):
     stores: List[StoreResponse] = []
 
 
+# =========================================================
+# Store Product Listing & Inventory Schemas
+# =========================================================
+
+class StoreListingCreate(BaseModel):
+    product_variant_id: UUID = Field(..., description="UUID of product variant from shared catalogue")
+    current_price: float = Field(..., gt=0, description="Selling price at this store")
+    quantity_on_hand: float = Field(0.0, ge=0, description="Initial stock quantity on hand")
+    reorder_threshold: Optional[float] = Field(None, ge=0, description="Minimum stock level before alert")
+    is_available: bool = Field(True, description="Whether listing is active and buyable")
+
+
+class StoreListingUpdate(BaseModel):
+    current_price: Optional[float] = Field(None, gt=0, description="Updated price")
+    is_available: Optional[bool] = Field(None, description="Updated availability status")
+    quantity_on_hand: Optional[float] = Field(None, ge=0, description="Direct stock level update")
+    reorder_threshold: Optional[float] = Field(None, ge=0, description="Updated reorder threshold")
+    stock_change_reason: Optional[Literal["restock", "sale", "adjustment", "expiry_writeoff"]] = Field(
+        "adjustment", description="Reason for quantity change if quantity_on_hand is modified"
+    )
+
+
+class StoreListingResponse(BaseModel):
+    id: UUID
+    store_id: UUID
+    product_variant_id: UUID
+    product_id: Optional[UUID] = None
+    product_name: Optional[str] = None
+    brand: Optional[str] = None
+    variant_label: Optional[str] = None
+    barcode: Optional[str] = None
+    current_price: float
+    is_available: bool
+    quantity_on_hand: float
+    reorder_threshold: Optional[float] = None
+    last_confirmed_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedStoreListingsResponse(BaseModel):
+    items: List[StoreListingResponse]
+    total: int = Field(..., description="Total matching listings count")
+    limit: int = Field(..., description="Limit applied")
+    offset: int = Field(..., description="Offset applied")
+
+
+class StockAdjustmentCreate(BaseModel):
+    change_qty: float = Field(..., description="Quantity delta (+ for restock, - for sale/adjustment)")
+    reason: Literal["restock", "sale", "adjustment", "expiry_writeoff"] = Field(
+        "restock", description="Reason for stock movement"
+    )
+
+
+class StockMovementResponse(BaseModel):
+    id: UUID
+    store_product_listing_id: UUID
+    change_qty: float
+    reason: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PriceHistoryResponse(BaseModel):
+    id: UUID
+    store_product_listing_id: UUID
+    price: float
+    effective_from: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class StoreListingDetailResponse(StoreListingResponse):
+    recent_price_history: List[PriceHistoryResponse] = []
+    recent_stock_movements: List[StockMovementResponse] = []
+
+
+
